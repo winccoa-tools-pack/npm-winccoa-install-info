@@ -84,7 +84,7 @@ stable public JSON schema.
 ## Relationship to the ecosystem
 
 | Package | Role |
-|---------|------|
+| --------- | ------ |
 | `npm-winccoa-core` | Source of truth for install, version, component, and project-registry APIs |
 | `npm-winccoa-install-info` | CLI (+ thin helpers) for install and registered-project introspection |
 | `npm-winccoa-register-project` | Mutating registration workflows; may *use* version lists |

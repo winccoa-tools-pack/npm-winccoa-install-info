@@ -142,9 +142,7 @@ export async function main(argv: string[] = process.argv): Promise<number> {
 
 // Run only when executed as the CLI entry (not when imported by unit tests).
 const isDirectRun =
-    typeof require !== 'undefined' &&
-    typeof module !== 'undefined' &&
-    require.main === module;
+    typeof require !== 'undefined' && typeof module !== 'undefined' && require.main === module;
 
 if (isDirectRun) {
     void main().then((code) => {

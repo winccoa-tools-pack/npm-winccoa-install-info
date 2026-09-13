@@ -56,7 +56,7 @@ Optional fields when present in the registry: `company`, `description`,
 ### Exit codes
 
 | Code | Meaning |
-|------|---------|
+| ------ | --------- |
 | 0 | Success |
 | 1 | Usage / help |
 | 2 | Runtime failure |
@@ -79,7 +79,7 @@ do not need the CLI.
 ## Related packages
 
 | Package | Role |
-|---------|------|
+| --------- | ------ |
 | `npm-winccoa-core` | Install, version, component, and project-registry APIs |
 | `npm-winccoa-install-info` | This CLI (+ thin helpers) |
 | `npm-winccoa-register-project` | Register / unregister projects |
