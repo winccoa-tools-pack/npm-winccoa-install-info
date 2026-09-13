@@ -1,9 +1,17 @@
 {
-  "name": "@winccoa-tools-pack/npm-winccoa-template",
-  "version": "0.2.2",
-  "description": "Template for WinCC OA npm packages",
+  "name": "@winccoa-tools-pack/npm-winccoa-install-info",
+  "version": "0.1.0",
+  "description": "CLI to get basic information about installed WinCC OA versions and registered projects",
   "author": "winccoa-tools-pack",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/winccoa-tools-pack/npm-winccoa-install-info.git"
+  },
+  "homepage": "https://github.com/winccoa-tools-pack/npm-winccoa-install-info#readme",
+  "bugs": {
+    "url": "https://github.com/winccoa-tools-pack/npm-winccoa-install-info/issues"
+  },
   "main": "dist/cjs/index.js",
   "module": "dist/esm/index.js",
   "types": "dist/index.d.ts",
@@ -25,7 +33,7 @@
     }
   },
   "bin": {
-    "winccoa-pnl-xml": "./dist/cjs/cli.js"
+    "winccoa-install-info": "./dist/cjs/cli.js"
   },
   "files": [
     "dist"

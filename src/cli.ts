@@ -1,41 +1,45 @@
 #!/usr/bin/env node
 
-import { PnlXmlConverter } from './converter';
-import { ConversionDirection } from './types';
-import type { ConversionOptions } from './types';
+import { listProjects, listVersions } from './api';
+import type { InstallInfoProject, InstallInfoVersion } from './types';
 
-/**
- * CLI exit codes.
- */
+/** CLI exit codes. */
 const EXIT_OK = 0;
 const EXIT_USAGE = 1;
-const EXIT_CONVERSION_FAILED = 2;
+const EXIT_FAILED = 2;
+
+const BIN = 'winccoa-install-info';
+
+export type CliCommand = 'versions' | 'projects';
+
+export interface ParsedArgs {
+    command: CliCommand;
+    json: boolean;
+}
 
 /**
  * Print usage information to stderr.
  */
-function printUsage(): void {
-    const bin = 'winccoa-pnl-xml';
+export function printUsage(): void {
     process.stderr.write(
         [
             '',
-            `Usage: ${bin} <command> [options]`,
+            `Usage: ${BIN} <command> [options]`,
             '',
             'Commands:',
-            '  convert pnl-to-xml <path>   Convert .pnl panel(s) to XML',
-            '  convert xml-to-pnl <path>   Convert XML file(s) back to .pnl',
+            '  versions    List installed WinCC OA versions and paths',
+            '  projects    List registered WinCC OA projects',
             '',
             'Options:',
-            '  -v, --version <ver>   WinCC OA version (e.g. 3.20)  [required]',
-            '  -c, --config <path>   WinCC OA project config file',
-            '  -o, --overwrite       Overwrite existing output files',
-            '  -t, --timeout <ms>    Process timeout in milliseconds (default: 60000)',
-            '  -h, --help            Show this help message',
+            '  --json              Emit machine-readable JSON (default for scripting)',
+            '  --no-json           Prefer a simple human-readable table on stdout',
+            '  -h, --help          Show this help message',
             '',
             'Examples:',
-            `  ${bin} convert pnl-to-xml panels/myPanel.pnl -v 3.20`,
-            `  ${bin} convert xml-to-pnl panels/myPanel.xml -v 3.20 -o`,
-            `  ${bin} convert pnl-to-xml panels/ -v 3.20 --timeout 120000`,
+            `  ${BIN} versions --json`,
+            `  ${BIN} projects --json`,
+            '',
+            'Detection is provided by @winccoa-tools-pack/npm-winccoa-core.',
             '',
         ].join('\n'),
     );
@@ -43,160 +47,107 @@ function printUsage(): void {
 
 /**
  * Minimal argument parser.
- * Returns the parsed CLI options or null when the input is invalid.
+ * Returns parsed options, or null when help/invalid (caller prints usage).
  */
-interface ParsedArgs {
-    direction: ConversionDirection;
-    inputPath: string;
-    version: string;
-    configPath?: string;
-    overwrite: boolean;
-    timeout?: number;
-}
-
-function parseArgs(argv: string[]): ParsedArgs | null {
-    // Strip node + script path
+export function parseArgs(argv: string[]): ParsedArgs | null {
     const args = argv.slice(2);
 
     if (args.length === 0 || args.includes('-h') || args.includes('--help')) {
         return null;
     }
 
-    // Expect: convert <pnl-to-xml|xml-to-pnl> <path> [options]
-    if (args[0] !== 'convert') {
-        process.stderr.write(`Error: Unknown command "${args[0]}". Expected "convert".\n`);
-        return null;
-    }
-
-    const subCommand = args[1];
-    let direction: ConversionDirection;
-
-    if (subCommand === 'pnl-to-xml') {
-        direction = ConversionDirection.PNL_TO_XML;
-    } else if (subCommand === 'xml-to-pnl') {
-        direction = ConversionDirection.XML_TO_PNL;
-    } else {
+    const command = args[0];
+    if (command !== 'versions' && command !== 'projects') {
         process.stderr.write(
-            `Error: Unknown sub-command "${subCommand}". Expected "pnl-to-xml" or "xml-to-pnl".\n`,
+            `Error: Unknown command "${command}". Expected "versions" or "projects".\n`,
         );
         return null;
     }
 
-    const inputPath = args[2];
-    if (!inputPath || inputPath.startsWith('-')) {
-        process.stderr.write('Error: Missing input path.\n');
-        return null;
-    }
-
-    let version = '';
-    let configPath: string | undefined;
-    let overwrite = false;
-    let timeout: number | undefined;
-
-    // Parse remaining flags
-    let i = 3;
-    while (i < args.length) {
-        const flag = args[i];
-        switch (flag) {
-            case '-v':
-            case '--version':
-                version = args[++i] ?? '';
-                break;
-            case '-c':
-            case '--config':
-                configPath = args[++i] ?? '';
-                break;
-            case '-o':
-            case '--overwrite':
-                overwrite = true;
-                break;
-            case '-t':
-            case '--timeout': {
-                const raw = args[++i] ?? '';
-                const parsed = Number(raw);
-                if (isNaN(parsed) || parsed <= 0) {
-                    process.stderr.write(`Error: Invalid timeout value "${raw}".\n`);
-                    return null;
-                }
-                timeout = parsed;
-                break;
-            }
-            default:
-                process.stderr.write(`Error: Unknown option "${flag}".\n`);
-                return null;
+    let json = true;
+    for (let i = 1; i < args.length; i++) {
+        const a = args[i];
+        if (a === '--json') {
+            json = true;
+        } else if (a === '--no-json') {
+            json = false;
+        } else if (a === '-h' || a === '--help') {
+            return null;
+        } else {
+            process.stderr.write(`Error: Unknown option "${a}".\n`);
+            return null;
         }
-        i++;
     }
 
-    if (!version) {
-        process.stderr.write('Error: WinCC OA version is required (-v / --version).\n');
-        return null;
-    }
+    return { command, json };
+}
 
-    return { direction, inputPath, version, configPath, overwrite, timeout };
+function printVersionsHuman(versions: InstallInfoVersion[]): void {
+    if (versions.length === 0) {
+        process.stdout.write('No WinCC OA versions found.\n');
+        return;
+    }
+    for (const v of versions) {
+        process.stdout.write(`${v.version}\t${v.installationPath ?? ''}\n`);
+    }
+}
+
+function printProjectsHuman(projects: InstallInfoProject[]): void {
+    if (projects.length === 0) {
+        process.stdout.write('No registered projects found.\n');
+        return;
+    }
+    for (const p of projects) {
+        const runnable = p.runnable ? 'runnable' : 'not-runnable';
+        process.stdout.write(
+            `${p.id}\t${runnable}\t${p.winccOaVersion ?? ''}\t${p.installationPath}\n`,
+        );
+    }
 }
 
 /**
- * Main CLI entry point.
+ * CLI entry used by the bin script and integration tests.
  */
-async function main(): Promise<void> {
-    const parsed = parseArgs(process.argv);
-
+export async function main(argv: string[] = process.argv): Promise<number> {
+    const parsed = parseArgs(argv);
     if (!parsed) {
         printUsage();
-        process.exitCode = EXIT_USAGE;
-        return;
+        return EXIT_USAGE;
     }
-
-    const options: ConversionOptions = {
-        version: parsed.version,
-        inputPath: parsed.inputPath,
-        configPath: parsed.configPath,
-        overwrite: parsed.overwrite,
-        timeout: parsed.timeout,
-    };
-
-    const directionLabel =
-        parsed.direction === ConversionDirection.PNL_TO_XML ? 'PNL → XML' : 'XML → PNL';
-
-    process.stderr.write(`Converting ${directionLabel}: ${parsed.inputPath}\n`);
 
     try {
-        const converter = new PnlXmlConverter();
-        const result = await converter.convert(options, parsed.direction);
-
-        if (result.stdout) {
-            process.stdout.write(result.stdout);
+        if (parsed.command === 'versions') {
+            const versions = listVersions();
+            if (parsed.json) {
+                process.stdout.write(`${JSON.stringify(versions, null, 2)}\n`);
+            } else {
+                printVersionsHuman(versions);
+            }
+            return EXIT_OK;
         }
-        if (result.stderr) {
-            process.stderr.write(result.stderr);
-        }
 
-        if (result.success) {
-            process.stderr.write('Conversion completed successfully.\n');
-            process.exitCode = EXIT_OK;
+        const projects = listProjects();
+        if (parsed.json) {
+            process.stdout.write(`${JSON.stringify(projects, null, 2)}\n`);
         } else {
-            process.stderr.write(`Conversion failed with exit code ${result.exitCode}.\n`);
-            process.exitCode = EXIT_CONVERSION_FAILED;
+            printProjectsHuman(projects);
         }
-    } catch (err: unknown) {
+        return EXIT_OK;
+    } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
         process.stderr.write(`Error: ${message}\n`);
-        process.exitCode = EXIT_CONVERSION_FAILED;
+        return EXIT_FAILED;
     }
 }
 
-// Auto-run only when invoked directly (not when imported for testing)
+// Run only when executed as the CLI entry (not when imported by unit tests).
 const isDirectRun =
-    process.argv[1] &&
-    (process.argv[1].endsWith('cli.js') ||
-        process.argv[1].endsWith('cli.ts') ||
-        process.argv[1].endsWith('cli.cjs') ||
-        process.argv[1].endsWith('cli.mjs'));
+    typeof require !== 'undefined' &&
+    typeof module !== 'undefined' &&
+    require.main === module;
 
 if (isDirectRun) {
-    main();
+    void main().then((code) => {
+        process.exitCode = code;
+    });
 }
-
-// Export for testing
-export { parseArgs, printUsage, main };

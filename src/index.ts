@@ -1,15 +1,9 @@
 /**
- * WinCC OA UI PNL/XML Converter
+ * @winccoa-tools-pack/npm-winccoa-install-info
  *
- * Provides reliable PNL ⇄ XML transformations for WinCC OA UI panels
- * using the WCCOAui manager under the hood.
+ * Thin CLI and helpers for WinCC OA installation and registered-project introspection.
+ * Detection lives in @winccoa-tools-pack/npm-winccoa-core.
  */
 
-// Types
-export { ConversionDirection, ConversionOptions, ConversionResult } from './types';
-
-// Core converter
-export { PnlXmlConverter } from './converter';
-
-// Convenience API
-export { pnlToXml, xmlToPnl } from './api';
+export type { InstallInfoVersion, InstallInfoProject } from './types';
+export { listVersions, listProjects, mapRegistryToInstallInfoProject } from './api';

@@ -1,6 +1,13 @@
-# Source Code
+# Source
 
-This directory contains the core WinCC OA functionality and utilities.
+Thin wrappers and CLI for WinCC OA install / project-registration info.
+
+- `api.ts` — `listVersions`, `listProjects` (core only)
+- `cli.ts` — `winccoa-install-info` bin
+- `types.ts` — public JSON shapes
+- `index.ts` — library exports
+
+Detection is implemented in `@winccoa-tools-pack/npm-winccoa-core`.
 
 ## Structure
 

@@ -2,39 +2,44 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import { parseArgs } from '../../src/cli';
-import { ConversionDirection } from '../../src/types';
 
 test('parseArgs: returns null for --help', () => {
     const parsed = parseArgs(['node', 'cli.ts', '--help']);
     assert.equal(parsed, null);
 });
 
-test('parseArgs: parses a valid pnl-to-xml command', () => {
-    const parsed = parseArgs([
-        'node',
-        'cli.ts',
-        'convert',
-        'pnl-to-xml',
-        'about.pnl',
-        '--version',
-        '3.20',
-        '--config',
-        'config/config',
-        '--overwrite',
-        '--timeout',
-        '120000',
-    ]);
-
-    assert.ok(parsed);
-    assert.equal(parsed.direction, ConversionDirection.PNL_TO_XML);
-    assert.equal(parsed.inputPath, 'about.pnl');
-    assert.equal(parsed.version, '3.20');
-    assert.equal(parsed.configPath, 'config/config');
-    assert.equal(parsed.overwrite, true);
-    assert.equal(parsed.timeout, 120000);
+test('parseArgs: returns null for -h', () => {
+    const parsed = parseArgs(['node', 'cli.ts', '-h']);
+    assert.equal(parsed, null);
 });
 
-test('parseArgs: rejects invalid timeout values', () => {
+test('parseArgs: returns null when no command', () => {
+    const parsed = parseArgs(['node', 'cli.ts']);
+    assert.equal(parsed, null);
+});
+
+test('parseArgs: parses versions with default json', () => {
+    const parsed = parseArgs(['node', 'cli.ts', 'versions']);
+    assert.ok(parsed);
+    assert.equal(parsed.command, 'versions');
+    assert.equal(parsed.json, true);
+});
+
+test('parseArgs: parses projects --json', () => {
+    const parsed = parseArgs(['node', 'cli.ts', 'projects', '--json']);
+    assert.ok(parsed);
+    assert.equal(parsed.command, 'projects');
+    assert.equal(parsed.json, true);
+});
+
+test('parseArgs: parses --no-json', () => {
+    const parsed = parseArgs(['node', 'cli.ts', 'versions', '--no-json']);
+    assert.ok(parsed);
+    assert.equal(parsed.command, 'versions');
+    assert.equal(parsed.json, false);
+});
+
+test('parseArgs: rejects unknown command', () => {
     const originalWrite = process.stderr.write.bind(process.stderr);
     let stderr = '';
     (process.stderr.write as unknown as (chunk: string) => boolean) = (chunk: string) => {
@@ -43,20 +48,26 @@ test('parseArgs: rejects invalid timeout values', () => {
     };
 
     try {
-        const parsed = parseArgs([
-            'node',
-            'cli.ts',
-            'convert',
-            'xml-to-pnl',
-            'about.xml',
-            '-v',
-            '3.20',
-            '--timeout',
-            'not-a-number',
-        ]);
-
+        const parsed = parseArgs(['node', 'cli.ts', 'convert']);
         assert.equal(parsed, null);
-        assert.match(stderr, /Invalid timeout value/);
+        assert.match(stderr, /Unknown command/);
+    } finally {
+        process.stderr.write = originalWrite;
+    }
+});
+
+test('parseArgs: rejects unknown option', () => {
+    const originalWrite = process.stderr.write.bind(process.stderr);
+    let stderr = '';
+    (process.stderr.write as unknown as (chunk: string) => boolean) = (chunk: string) => {
+        stderr += chunk;
+        return true;
+    };
+
+    try {
+        const parsed = parseArgs(['node', 'cli.ts', 'versions', '--timeout', '1']);
+        assert.equal(parsed, null);
+        assert.match(stderr, /Unknown option/);
     } finally {
         process.stderr.write = originalWrite;
     }

@@ -1,6 +1,4 @@
-/**
- * Utility Functions
- * Core utility functions
+﻿/**
+ * Utility barrel — reserved for future helpers.
  */
-
-// export * from './winccoa-components';
+export {};
