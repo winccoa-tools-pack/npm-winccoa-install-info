@@ -27,4 +27,5 @@ We're excited to be part of your development journey. **Happy Coding! 🚀**
 
 ---
 
-<center>Made with ❤️ for and by the WinCC OA community</center>
+<!-- markdownlint-disable MD033 -->
+<div align="center">Made with ❤️ for and by the WinCC OA community</div>

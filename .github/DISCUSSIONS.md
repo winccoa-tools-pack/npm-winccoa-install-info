@@ -70,3 +70,5 @@ Format code properly, use clear titles, and include context.
 - [Contributing Guide](../CONTRIBUTING.md)
 
 Let's build an amazing community!
+<!-- markdownlint-disable MD033 -->
+<div align="center">Made with ❤️ for and by the WinCC OA community</div>

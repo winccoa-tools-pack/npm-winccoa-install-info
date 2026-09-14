@@ -1,86 +1,15 @@
-# Test Helpers
+# Test helpers
 
-This directory contains helper functions for integration tests.
+Shared helpers for integration tests in this package.
 
-## test-project-helpers.ts
+## `integration-teardown.ts`
 
-Helper functions for working with WinCC OA test projects in integration tests.
+`printLocalIntegrationTestResult(tag, result)` — prints a stable stdout/stderr
+summary after a local CLI integration run (useful to paste into a PR when CI
+OOMs). Used by `test/integration/cli-help.test.ts`.
 
-### Functions
+Project register/unregister helpers from the npm template were removed; this
+CLI does not need fixture project lifecycle helpers.
 
-#### `registerRunnableTestProject()`
-
-Creates and registers a runnable WinCC OA test project from `test/fixtures/projects/runnable`.
-
-Returns a `ProjEnvProject` instance that is registered with WinCC OA.
-
-**Example:**
-
-```typescript
-const project = await registerRunnableTestProject();
-try {
-    await project.start();
-    // ... test code
-} finally {
-    await unregisterTestProject(project);
-}
-```
-
-#### `unregisterTestProject(project: ProjEnvProject)`
-
-Unregisters and cleans up a test project. Automatically stops the project if running.
-
-#### `withRunnableTestProject(testFn: (project) => Promise<void>)`
-
-Convenience wrapper that automatically registers a test project, runs your test function, and cleans up afterwards.
-
-**Example:**
-
-```typescript
-await withRunnableTestProject(async (project) => {
-    await project.start();
-    assert.ok(project.isRunning());
-});
-// Project is automatically unregistered here
-```
-
-#### `getFixturesPath()`
-
-Returns the absolute path to the `test/fixtures` directory.
-
-#### `getTestProjectPath(projectName: string)`
-
-Returns the absolute path to a specific test project fixture.
-
-**Example:**
-
-```typescript
-const path = getTestProjectPath('runnable');
-// Returns: /path/to/test/fixtures/projects/runnable
-```
-
-## Usage in Tests
-
-```typescript
-import { describe, it } from 'node:test';
-import { strict as assert } from 'assert';
-import { withRunnableTestProject } from '../helpers/test-project-helpers';
-
-describe('My Integration Test', () => {
-    it('should test project functionality', async () => {
-        await withRunnableTestProject(async (project) => {
-            // Your test code here
-            assert.ok(project.isRegistered());
-        });
-    });
-});
-```
-
-## Test Fixtures
-
-The helper uses test project fixtures located in `test/fixtures/projects/`:
-
-- `runnable/` - A complete runnable WinCC OA project for testing
-- `sub-proj/` - A sub-project fixture (not runnable)
-
-Each fixture contains a `config/` directory with WinCC OA configuration files.
+<!-- markdownlint-disable MD033 -->
+<div align="center">Made with ❤️ for and by the WinCC OA community</div>

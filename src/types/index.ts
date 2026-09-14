@@ -1,6 +1,4 @@
-/**
- * Types (classes ...)
+﻿/**
+ * Types barrel.
  */
-
-// export what ever you need
-// export * from './version/DetailedVersionInfo.js';
+export type { InstallInfoVersion, InstallInfoProject } from '../types';

@@ -1,187 +1,142 @@
----
-Minimal starter template for creating shared WinCC OA NPM libraries
-THIS IS AN EXAMPLE README
----
+# npm-winccoa-install-info
 
+<!-- markdownlint-disable MD033 -->
+<div align="center">
 
-# WinCC OA UI PNL/XML Converter
+[![npm version](https://img.shields.io/npm/v/@winccoa-tools-pack/npm-winccoa-install-info.svg?label=npm)](https://www.npmjs.com/package/@winccoa-tools-pack/npm-winccoa-install-info)
+![License](https://img.shields.io/github/license/winccoa-tools-pack/npm-winccoa-install-info)
+[![CI/CD](https://github.com/winccoa-tools-pack/npm-winccoa-install-info/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/winccoa-tools-pack/npm-winccoa-install-info/actions/workflows/ci-cd.yml)
+[![Release](https://github.com/winccoa-tools-pack/npm-winccoa-install-info/actions/workflows/release.yml/badge.svg)](https://github.com/winccoa-tools-pack/npm-winccoa-install-info/actions/workflows/release.yml)
 
-A lightweight developer tool for SIMATIC WinCC Open Architecture projects, providing reliable PNL ⇄ XML transformations for UI panels.
-This package is part of the modular winccoa-tools-pack ecosystem, which delivers modern development tooling,
-reusable libraries, and VS Code extensions for WinCC OA engineers.
-[github.com](https://github.com/winccoa-tools-pack)
+</div>
 
-## ✨ Features
+CLI (and thin library helpers) for **WinCC OA installation and registered-project
+introspection**.
 
-- **PNL → XML conversion**  
-  Transform classic .pnl UI panel files into structured XML suitable for analysis, automation, and editor tooling.
+Detection of installed versions and the project registry lives in
+[`@winccoa-tools-pack/npm-winccoa-core`](https://github.com/winccoa-tools-pack/npm-winccoa-core).
+This package is a small, scriptable facade — not a second discovery stack.
 
-- **XML → PNL conversion**  
-  Regenerate WinCC OA .pnl files from XML to enable round-trip workflows and external processing.
+See [docs/VISION.md](docs/VISION.md) for scope and JSON shapes.
 
-- **Tooling-friendly design**  
-  Built to integrate with next-generation WinCC OA development tools such as VS Code extensions,
-  reusable workflows, and advanced analysis pipelines,
-  consistent with the overall goals of the winccoa-tools-pack organization.
-
-- **Modern project template**  
-  Generated from the shared npm-winccoa-template to ensure consistent structure, CI/CD, TypeScript setup, linting, and maintainability across the ecosystem.
-
-## 📦 Installation
+## Install
 
 ```shell
-npm install @winccoa-tools-pack/npm-winccoa-ui-pnl-xml
+npm install -g @winccoa-tools-pack/npm-winccoa-install-info
 ```
 
-Or globally:
+Or run without a global install:
 
 ```shell
-npm install -g @winccoa-tools-pack/npm-winccoa-ui-pnl-xml
+npx @winccoa-tools-pack/npm-winccoa-install-info --help
 ```
 
-## 🖥 Usage (CLI)
+## CLI
+
+```text
+winccoa-install-info versions [--json|--no-json] [--result-file <path>]
+winccoa-install-info projects [--json|--no-json] [--result-file <path>]
+```
+
+JSON is the default (best for scripts/CI). Use `--no-json` for a simple TSV table.
+
+Core may print diagnostic logs to the console. For automation, prefer
+`--result-file` so the clean payload is written to a file (stdout is not used
+for the payload in that mode).
+
+### Examples
 
 ```shell
-# Convert .pnl → .xml (in-place)
-winccoa-pnl-xml convert pnl-to-xml about.pnl --version 3.20
-
-# Convert .xml → .pnl (in-place)
-winccoa-pnl-xml convert xml-to-pnl about.xml --version 3.20
-
-# Optional flags
-#   --config <path>   Use a specific project config file
-#   --overwrite       Overwrite existing output files
-#   --timeout <ms>    Increase process timeout
+winccoa-install-info versions --json
+winccoa-install-info projects --json
+winccoa-install-info projects --result-file projects.json
+winccoa-install-info versions --no-json --result-file versions.txt
 ```
 
-## ⚠️ Important behavior
+Example `projects` item:
 
-- Conversion is performed by WinCC OA `WCCOAui` and is **in-place** (the input file is rewritten).
-- WinCC OA may create a `.bak` file next to the input.
-- The input passed to `-p` is typically resolved relative to the project’s `panels/` directory.
-  Use `--config` if you need to point the converter at a specific project context.
-
-## 🧩 Usage (API)
-
-```typescript
-import { pnlToXml, xmlToPnl } from "@winccoa-tools-pack/npm-winccoa-ui-pnl-xml";
-
-// Note: WinCC OA performs the conversion in-place and may create a .bak backup.
-// The input path is typically resolved relative to the project’s panels/ directory.
-
-const pnlToXmlResult = await pnlToXml({
-  version: "3.20",
-  inputPath: "about.pnl",
-  // configPath: "C:/path/to/project/config/config",
-  // overwrite: true,
-  // timeout: 120_000,
-});
-
-if (!pnlToXmlResult.success) {
-  throw new Error(`Conversion failed (exit ${pnlToXmlResult.exitCode}): ${pnlToXmlResult.stderr}`);
+```json
+{
+  "id": "MyPlant",
+  "name": "MyPlant",
+  "runnable": true,
+  "installationPath": "D:/WinCC_OA_Proj/MyPlant",
+  "winccOaVersion": "3.20",
+  "currentProject": false
 }
-
-const xmlToPnlResult = await xmlToPnl({
-  version: "3.20",
-  inputPath: "about.xml",
-});
-
-console.log({ pnlToXmlResult, xmlToPnlResult });
 ```
 
-More details: see [docs/USAGE.md](docs/USAGE.md).
+Optional fields when present in the registry: `company`, `description`,
+`invalidReason`.
 
-## 🩺 Troubleshooting
+### Exit codes
 
-- Non-zero exit code: inspect `stderr` and ensure `--version` matches your WinCC OA installation.
-- Timeouts on large panels: increase `--timeout` / `timeout`.
-- File not found: remember `inputPath` is usually relative to `panels/` in the active project context.
+| Code | Meaning |
+| ------ | --------- |
+| 0 | Success |
+| 1 | Usage / help |
+| 2 | Runtime failure |
 
-## 📚 Ecosystem Integration
+## Library
 
-This package is designed for seamless use with:
+```ts
+import {
+  listVersions,
+  listProjects,
+} from '@winccoa-tools-pack/npm-winccoa-install-info';
 
-- **VS Code extensions for WinCC OA development**  
-  Our open source community provides multiple VS Code tools that enhance the engineering workflow
-  for WinCC OA developers. This converter acts as a foundation for UI-related features such as the Panel Explorer.
-
-- **Node.js libraries**  
-  Works side-by-side with other libraries in the winccoa-tools-pack suite (project management, core utilities, testing, etc.).
-
-- **CI/CD automation**  
-  Ideal for pipelines needing validation or transformation of UI panel resources.
-
-- **Automation tokens** are recommended for CI/CD (they don't expire but can be revoked)
-- The token needs **publish** permission for your package scope
-- For scoped packages (`@winccoa-tools-pack/...`), ensure your NPM organization allows publishing
-
-### Testing Without NPM_TOKEN
-
-If `NPM_TOKEN` is not configured, the workflow will:
-
-- ✅ Still run tests and build the package
-- ✅ Create GitHub releases with artifacts
-- ⚠️ Skip NPM publishing with a warning message
-
-You can always publish manually later:
-
-```bash
-npm publish --access public
+const versions = listVersions();
+const projects = listProjects();
 ```
 
-## 📦 Development
+For programmatic access inside Node apps, prefer core APIs directly when you
+do not need the CLI.
 
-```bash
-# Install dependencies
-npm install
+## Related packages
 
-# Build the library
+| Package | Role |
+| --------- | ------ |
+| `npm-winccoa-core` | Install, version, component, and project-registry APIs |
+| `npm-winccoa-install-info` | This CLI (+ thin helpers) |
+| `npm-winccoa-register-project` | Register / unregister projects |
+
+## Development
+
+```shell
+npm ci
 npm run build
-
-# Run tests
-npm test
-
-# Lint code
-npm run lint
+npm run test:unit
+npm run test:integration
 ```
 
-## 🏆 Recognition
+Requires Node.js 20+.
 
-Special thanks to all our [contributors](https://github.com/orgs/winccoa-tools-pack/people) who make this project possible!
+### Try the CLI against your machine
 
-### Key Contributors
+After a build, run the compiled entry (no global install needed):
 
-- **Martin Pokorny** ([@mPokornyETM](https://github.com/mPokornyETM)) - Creator & Lead Developer
-- And many more amazing contributors!
+```shell
+node dist/cjs/cli.js --help
+node dist/cjs/cli.js versions
+node dist/cjs/cli.js projects
+node dist/cjs/cli.js versions --no-json
+```
 
----
+Optional: `npm link` so `winccoa-install-info` is on your PATH, or use
+`npx tsx src/cli.ts …` without rebuilding.
 
-## 📜 License
+Full contributor workflow (link/unlink, exit codes, empty-host behavior):
+see [CONTRIBUTING.md](CONTRIBUTING.md#test-the-cli-locally).
 
-This project is licensed under the **MIT License** - see the [LICENSE](https://github.com/winccoa-tools-pack/.github/blob/main/LICENSE) file for details.
+## Docs index
 
-It might happen that partial repositories contain third party SW which uses other license models.
+| Doc | Contents |
+| --- | -------- |
+| [docs/VISION.md](docs/VISION.md) | Product scope |
+| [docs/automation/CI-INTEGRATION.md](docs/automation/CI-INTEGRATION.md) | Package CI knobs; workflows are source of truth |
+| [docs/automation/GITFLOW_WORKFLOW.md](docs/automation/GITFLOW_WORKFLOW.md) | Short pointers to APM **`git-flow`** / related skills |
 
----
+Org process lives in APM skills (`apm install` → `.github/skills/`), not duplicated long template docs.
 
-## ⚠️ Disclaimer
-
-**WinCC OA** and **Siemens** are trademarks of Siemens AG.
-This project is not affiliated with, endorsed by, or sponsored by Siemens AG.
-This is a community-driven open source project created to enhance the development experience for WinCC OA developers.
-
----
-
-## 🎉 Thank You
-
-Thank you for using WinCC OA tools package! We're excited to be part of your development journey.
-
-Happy Coding! 🚀
-
----
-
-## Quick Links
-
-[📦 VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=mPokornyETM.wincc-oa-projects)
-
-Made with ❤️ for and by the WinCC OA community
+<!-- markdownlint-disable MD033 -->
+<div align="center">Made with ❤️ for and by the WinCC OA community</div>

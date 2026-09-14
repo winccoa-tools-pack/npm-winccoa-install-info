@@ -84,7 +84,7 @@ stable public JSON schema.
 ## Relationship to the ecosystem
 
 | Package | Role |
-|---------|------|
+| --------- | ------ |
 | `npm-winccoa-core` | Source of truth for install, version, component, and project-registry APIs |
 | `npm-winccoa-install-info` | CLI (+ thin helpers) for install and registered-project introspection |
 | `npm-winccoa-register-project` | Mutating registration workflows; may *use* version lists |
@@ -109,3 +109,6 @@ keep this package a thin bin.
 If this CLI never grows beyond wrapping a handful of core getters, consider
 folding the bin into core (or documenting core-only usage) rather than
 maintaining a hollow package.
+
+<!-- markdownlint-disable MD033 -->
+<div align="center">Made with ❤️ for and by the WinCC OA community</div>
