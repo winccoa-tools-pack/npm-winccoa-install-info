@@ -176,8 +176,7 @@ export async function main(argv: string[] = process.argv): Promise<number> {
     }
 
     try {
-        const data =
-            parsed.command === 'versions' ? listVersions() : listProjects();
+        const data = parsed.command === 'versions' ? listVersions() : listProjects();
         const payload = formatPayload(data, parsed.command, parsed.json);
         emitResult(payload, parsed.resultFile);
         return EXIT_OK;
