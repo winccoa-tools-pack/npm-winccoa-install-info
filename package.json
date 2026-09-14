@@ -1,6 +1,6 @@
 {
   "name": "@winccoa-tools-pack/npm-winccoa-install-info",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "CLI to get basic information about installed WinCC OA versions and registered projects",
   "author": "winccoa-tools-pack",
   "license": "MIT",
