@@ -109,3 +109,6 @@ keep this package a thin bin.
 If this CLI never grows beyond wrapping a handful of core getters, consider
 folding the bin into core (or documenting core-only usage) rather than
 maintaining a hollow package.
+
+<!-- markdownlint-disable MD033 -->
+<div align="center">Made with ❤️ for and by the WinCC OA community</div>

@@ -1,5 +1,10 @@
 #!/usr/bin/env node
 
+import fs from 'node:fs';
+import path from 'node:path';
+
+import { stopWatchingProjectRegistries } from '@winccoa-tools-pack/npm-winccoa-core/types/project/ProjEnvProjectRegistry';
+
 import { listProjects, listVersions } from './api';
 import type { InstallInfoProject, InstallInfoVersion } from './types';
 
@@ -15,6 +20,8 @@ export type CliCommand = 'versions' | 'projects';
 export interface ParsedArgs {
     command: CliCommand;
     json: boolean;
+    /** When set, write the command payload here instead of stdout. */
+    resultFile?: string;
 }
 
 /**
@@ -31,13 +38,18 @@ export function printUsage(): void {
             '  projects    List registered WinCC OA projects',
             '',
             'Options:',
-            '  --json              Emit machine-readable JSON (default for scripting)',
-            '  --no-json           Prefer a simple human-readable table on stdout',
-            '  -h, --help          Show this help message',
+            '  --json                    Emit machine-readable JSON (default)',
+            '  --no-json                 Prefer a simple human-readable table',
+            '  --result-file <path>      Write payload to a file (not stdout).',
+            '                            Use this when core logs pollute stdout;',
+            '                            diagnostics still go to the console.',
+            '  -h, --help                Show this help message',
             '',
             'Examples:',
             `  ${BIN} versions --json`,
             `  ${BIN} projects --json`,
+            `  ${BIN} projects --result-file projects.json`,
+            `  ${BIN} versions --no-json --result-file versions.txt`,
             '',
             'Detection is provided by @winccoa-tools-pack/npm-winccoa-core.',
             '',
@@ -65,12 +77,31 @@ export function parseArgs(argv: string[]): ParsedArgs | null {
     }
 
     let json = true;
+    let resultFile: string | undefined;
+
     for (let i = 1; i < args.length; i++) {
         const a = args[i];
         if (a === '--json') {
             json = true;
         } else if (a === '--no-json') {
             json = false;
+        } else if (a === '--result-file' || a.startsWith('--result-file=')) {
+            let value: string | undefined;
+            if (a.startsWith('--result-file=')) {
+                value = a.slice('--result-file='.length);
+            } else {
+                value = args[i + 1];
+                if (value === undefined || value.startsWith('-')) {
+                    process.stderr.write('Error: --result-file requires a path argument.\n');
+                    return null;
+                }
+                i += 1;
+            }
+            if (!value || value.trim() === '') {
+                process.stderr.write('Error: --result-file requires a non-empty path.\n');
+                return null;
+            }
+            resultFile = value;
         } else if (a === '-h' || a === '--help') {
             return null;
         } else {
@@ -79,30 +110,59 @@ export function parseArgs(argv: string[]): ParsedArgs | null {
         }
     }
 
-    return { command, json };
+    return { command, json, resultFile };
 }
 
-function printVersionsHuman(versions: InstallInfoVersion[]): void {
+function formatVersionsHuman(versions: InstallInfoVersion[]): string {
     if (versions.length === 0) {
-        process.stdout.write('No WinCC OA versions found.\n');
-        return;
+        return 'No WinCC OA versions found.\n';
     }
-    for (const v of versions) {
-        process.stdout.write(`${v.version}\t${v.installationPath ?? ''}\n`);
-    }
+    return versions.map((v) => `${v.version}\t${v.installationPath ?? ''}`).join('\n') + '\n';
 }
 
-function printProjectsHuman(projects: InstallInfoProject[]): void {
+function formatProjectsHuman(projects: InstallInfoProject[]): string {
     if (projects.length === 0) {
-        process.stdout.write('No registered projects found.\n');
+        return 'No registered projects found.\n';
+    }
+    return (
+        projects
+            .map((p) => {
+                const runnable = p.runnable ? 'runnable' : 'not-runnable';
+                return `${p.id}\t${runnable}\t${p.winccOaVersion ?? ''}\t${p.installationPath}`;
+            })
+            .join('\n') + '\n'
+    );
+}
+
+function formatPayload(
+    data: InstallInfoVersion[] | InstallInfoProject[],
+    command: CliCommand,
+    json: boolean,
+): string {
+    if (json) {
+        return `${JSON.stringify(data, null, 2)}\n`;
+    }
+    return command === 'versions'
+        ? formatVersionsHuman(data as InstallInfoVersion[])
+        : formatProjectsHuman(data as InstallInfoProject[]);
+}
+
+/**
+ * Emit the command payload to stdout, or to --result-file when set.
+ * Core may still log to stdout/stderr; the file is the clean automation artifact.
+ */
+export function emitResult(payload: string, resultFile?: string): void {
+    if (!resultFile) {
+        process.stdout.write(payload);
         return;
     }
-    for (const p of projects) {
-        const runnable = p.runnable ? 'runnable' : 'not-runnable';
-        process.stdout.write(
-            `${p.id}\t${runnable}\t${p.winccOaVersion ?? ''}\t${p.installationPath}\n`,
-        );
-    }
+
+    const resolved = path.resolve(resultFile);
+    const dir = path.dirname(resolved);
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(resolved, payload, 'utf8');
+    // Small confirmation on stderr so scripts watching stdout are not mixed with core logs.
+    process.stderr.write(`Wrote result to ${resolved}\n`);
 }
 
 /**
@@ -116,27 +176,19 @@ export async function main(argv: string[] = process.argv): Promise<number> {
     }
 
     try {
-        if (parsed.command === 'versions') {
-            const versions = listVersions();
-            if (parsed.json) {
-                process.stdout.write(`${JSON.stringify(versions, null, 2)}\n`);
-            } else {
-                printVersionsHuman(versions);
-            }
-            return EXIT_OK;
-        }
-
-        const projects = listProjects();
-        if (parsed.json) {
-            process.stdout.write(`${JSON.stringify(projects, null, 2)}\n`);
-        } else {
-            printProjectsHuman(projects);
-        }
+        const data =
+            parsed.command === 'versions' ? listVersions() : listProjects();
+        const payload = formatPayload(data, parsed.command, parsed.json);
+        emitResult(payload, parsed.resultFile);
         return EXIT_OK;
     } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
         process.stderr.write(`Error: ${message}\n`);
         return EXIT_FAILED;
+    } finally {
+        // Core starts an fs.watch on pvssInst.conf when reading the project
+        // registry; without closing it the Node process never exits.
+        stopWatchingProjectRegistries();
     }
 }
 
