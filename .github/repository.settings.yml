@@ -2,7 +2,7 @@
 # This repo uses GitFlow: develop is default, main is stable release.
 
 description: "Provide CLI to get basic information about installed WinCC OA versions and registered projects"
-homepage: "https://github.com/winccoa-tools-pack/npm-winccoa-install-info"
+homepage: "https://github.com/winccoa-tools-pack"
 default_branch: "develop"
 
 has_issues: true
@@ -47,6 +47,7 @@ auto_approve:
 actions_permissions:
   enabled: true
   allowed_actions: all
+
 # Default workflow permissions for the repository (controls GITHUB_TOKEN scope)
 # - default_workflow_permissions: one of 'read' or 'write'
 # - can_approve_pull_request_reviews: whether Actions can approve PRs
